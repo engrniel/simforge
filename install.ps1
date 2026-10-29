@@ -211,11 +211,26 @@
         Write-Host "      Automatic updates could not be turned on ($why)." -ForegroundColor Yellow
         Write-Host "      To update later, run this same command again."
     }
+    if ($used -ge 1) {
+        # Run the updater once now, so the required check below shows a real
+        # result (LastTaskResult 0) instead of "never run". Wait up to 30 s.
+        try {
+            Start-ScheduledTask -TaskName "SimForge Update"
+            for ($i = 0; $i -lt 30; $i++) {
+                Start-Sleep -Seconds 1
+                if ((Get-ScheduledTask -TaskName "SimForge Update").State -ne "Running") { break }
+            }
+        } catch {}
+    }
 
     Write-Host ""
     Write-Host "Done! SimForge $version is installed. Opening it now..." -ForegroundColor Green
     Write-Host "Next time, open it from the SimForge icon on your Desktop."
     Write-Host "(If Windows says 'Windows protected your PC', click More info, then Run anyway.)"
+    Write-Host ""
+    Write-Host "Last step (required): check that automatic updates are on. Run:" -ForegroundColor Yellow
+    Write-Host '    Get-ScheduledTaskInfo -TaskName "SimForge Update"'
+    Write-Host "You should see 'LastTaskResult : 0' and a date next to 'NextRunTime'."
     Write-Host ""
     Start-Process $app -WorkingDirectory (Split-Path $app)
 }

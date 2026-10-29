@@ -16,6 +16,20 @@ irm https://raw.githubusercontent.com/engrniel/simforge/main/install.ps1 | iex
 ```
 
 3. Wait for **Done!**. SimForge opens by itself. Next time, use the **SimForge** icon on your Desktop.
+4. **Required: check that automatic updates are on.** In the same PowerShell window, paste this and press **Enter**:
+
+```powershell
+Get-ScheduledTaskInfo -TaskName "SimForge Update"
+```
+
+   You should see `LastTaskResult : 0` and a date next to `NextRunTime`. If you see something else:
+
+   | If you see | Do this |
+   |---|---|
+   | A red error: *No MSFT_ScheduledTask objects found* | Automatic updates are off. Run the install command from step 2 again, then repeat this check. |
+   | `LastTaskResult : 267009` | The first update is still running. Wait one minute and check again. |
+   | `LastTaskResult : 267011` | It has not run yet. Press **Windows + L** to lock, sign back in, and check again. |
+   | Any other number | Show this window to your teacher. |
 
 If Windows says **"Windows protected your PC"**, click **More info**, then **Run anyway**.
 
