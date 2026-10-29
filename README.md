@@ -50,7 +50,7 @@ Run the same install command again. It is safe to run any number of times: it fi
 1. Install Git and Python 3.9+ if they are missing, for the current user only.
 2. `git clone` this repository into `%LOCALAPPDATA%\SimForge` (Windows) or `~/SimForge` (Mac).
 3. Add Desktop and Start Menu shortcuts (Windows) or `~/Applications/SimForge.app` (Mac).
-4. Turn on automatic updates. Windows: a scheduled task, **SimForge Update**, at sign-in, on every unlock (so after waking from sleep) and daily at noon; a missed noon run happens as soon as the laptop is awake. Mac: a LaunchAgent, `ph.nrdev.simforge.update`, at login and every hour; an hourly run missed during sleep happens on wake. Both run `update.ps1` / `update.sh`, which run `git pull`. Windows skips a run while SimForge is open and catches up on the next one.
+4. Turn on automatic updates. Windows: a scheduled task, **SimForge Update**, at sign-in, on every unlock, when the laptop wakes from sleep, and daily at noon; a missed noon run happens as soon as the laptop is awake. Mac: a LaunchAgent, `ph.nrdev.simforge.update`, at login and every hour; an hourly run missed during sleep happens on wake. Both run `update.ps1` / `update.sh`, which run `git pull`. Right after waking, the updaters wait up to about 2 minutes for Wi-Fi. Windows skips a run while SimForge is open and catches up on the next one.
 
 **Repository layout**
 

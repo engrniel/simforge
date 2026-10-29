@@ -180,17 +180,36 @@
         $triggers += New-CimInstance -CimClass $cls -ClientOnly -Property @{ StateChange = 8; UserId = $me; Enabled = $true }
     } catch {}
     try {
-        Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $triggers -Settings $settings -Force | Out-Null
-        Ok "SimForge will update itself at sign-in, after waking from sleep, and daily at noon"
-    } catch {
-        # Some locked-down laptops refuse sign-in/unlock triggers; keep the daily one.
+        # Wake: Windows logs "resumed from sleep" (Power-Troubleshooter, event 1),
+        # so this also covers laptops with no lock screen.
+        $ecls = Get-CimClass -Namespace ROOT\Microsoft\Windows\TaskScheduler -ClassName MSFT_TaskEventTrigger
+        $wake = "<QueryList><Query Id=`"0`" Path=`"System`"><Select Path=`"System`">" +
+                "*[System[Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and EventID=1]]" +
+                "</Select></Query></QueryList>"
+        $triggers += New-CimInstance -CimClass $ecls -ClientOnly -Property @{ Subscription = $wake; Enabled = $true }
+    } catch {}
+    # Some locked-down laptops refuse a trigger type. Drop triggers from the end
+    # (wake, then unlock, then sign-in) until Windows accepts the task. The daily
+    # noon trigger always stays, and it still catches up after sleep.
+    $used = 0
+    $why = ""
+    for ($n = $triggers.Count; $n -ge 1; $n--) {
         try {
-            Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $daily -Settings $settings -Force | Out-Null
-            Ok "SimForge will update itself daily at noon (or as soon as the laptop is awake)"
-        } catch {
-            Write-Host "      Automatic updates could not be turned on ($($_.Exception.Message))." -ForegroundColor Yellow
-            Write-Host "      To update later, run this same command again."
-        }
+            Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $triggers[0..($n - 1)] `
+                -Settings $settings -Force -ErrorAction Stop | Out-Null
+            $used = $n
+            break
+        } catch { $why = $_.Exception.Message }
+    }
+    if ($used -eq 4) {
+        Ok "SimForge will update itself at sign-in, after waking from sleep, and daily at noon"
+    } elseif ($used -ge 2) {
+        Ok "SimForge will update itself at sign-in and daily at noon (a missed update runs as soon as the laptop is awake)"
+    } elseif ($used -eq 1) {
+        Ok "SimForge will update itself daily at noon (a missed update runs as soon as the laptop is awake)"
+    } else {
+        Write-Host "      Automatic updates could not be turned on ($why)." -ForegroundColor Yellow
+        Write-Host "      To update later, run this same command again."
     }
 
     Write-Host ""
