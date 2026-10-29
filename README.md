@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/engrniel/simforge/main/install.sh |
 
 ## Updates
 
-SimForge updates itself. You don't need to do anything.
+SimForge updates itself in the background, including after your laptop wakes from sleep. You don't need to do anything.
 
 To update right now, run the same install command again.
 
@@ -50,7 +50,7 @@ Run the same install command again. It is safe to run any number of times: it fi
 1. Install Git and Python 3.9+ if they are missing, for the current user only.
 2. `git clone` this repository into `%LOCALAPPDATA%\SimForge` (Windows) or `~/SimForge` (Mac).
 3. Add Desktop and Start Menu shortcuts (Windows) or `~/Applications/SimForge.app` (Mac).
-4. Turn on automatic updates: a scheduled task, **SimForge Update**, daily at noon (Windows), or a LaunchAgent, `ph.nrdev.simforge.update`, at login and every 6 hours (Mac). It runs `update.ps1` / `update.sh`, which run `git pull`.
+4. Turn on automatic updates. Windows: a scheduled task, **SimForge Update**, at sign-in, on every unlock (so after waking from sleep) and daily at noon; a missed noon run happens as soon as the laptop is awake. Mac: a LaunchAgent, `ph.nrdev.simforge.update`, at login and every hour; an hourly run missed during sleep happens on wake. Both run `update.ps1` / `update.sh`, which run `git pull`. Windows skips a run while SimForge is open and catches up on the next one.
 
 **Repository layout**
 

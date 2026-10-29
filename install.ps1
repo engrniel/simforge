@@ -9,7 +9,8 @@
 #   2. Python 3.9+: uses the one on PATH, or installs Python 3.12 for this user.
 #   3. SimForge: `git clone` into %LOCALAPPDATA%\SimForge (or `git pull` if it is there).
 #   4. Desktop and Start Menu shortcuts.
-#   5. The "SimForge Update" scheduled task, which runs update.ps1 (`git pull`) daily.
+#   5. The "SimForge Update" scheduled task, which runs update.ps1 (`git pull`) at
+#      sign-in, on every unlock (so after waking from sleep) and daily at noon.
 #
 # Everything sits inside one script block, so `irm | iex` leaves no variables
 # behind and an error never closes the student's PowerShell window.
@@ -160,16 +161,36 @@
 
     # --- 5. Automatic updates ----------------------------------------------
     Step 5 "Turning on automatic updates"
+    $updater = Join-Path $Dir "update.ps1"
+    # `conhost --headless` runs the updater with no window at all. A plain
+    # -WindowStyle Hidden still flashes a console (or opens Windows Terminal on
+    # Windows 11) every time the task runs.
+    $action = New-ScheduledTaskAction -Execute "conhost.exe" -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$updater`""
+    # StartWhenAvailable: a run missed while the laptop was asleep or off
+    # happens as soon as it is awake again.
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+                    -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
+    $me = "$env:USERDOMAIN\$env:USERNAME"
+    $daily = New-ScheduledTaskTrigger -Daily -At 12pm
+    $triggers = @($daily)
+    try { $triggers += New-ScheduledTaskTrigger -AtLogOn -User $me } catch {}
     try {
-        $updater  = Join-Path $Dir "update.ps1"
-        $action   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$updater`""
-        $trigger  = New-ScheduledTaskTrigger -Daily -At 12pm
-        $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
-        Ok "SimForge will update itself every day"
+        # Unlock: waking from sleep ends on the lock screen, so this runs after every wake.
+        $cls = Get-CimClass -Namespace ROOT\Microsoft\Windows\TaskScheduler -ClassName MSFT_TaskSessionStateChangeTrigger
+        $triggers += New-CimInstance -CimClass $cls -ClientOnly -Property @{ StateChange = 8; UserId = $me; Enabled = $true }
+    } catch {}
+    try {
+        Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $triggers -Settings $settings -Force | Out-Null
+        Ok "SimForge will update itself at sign-in, after waking from sleep, and daily at noon"
     } catch {
-        Write-Host "      Automatic updates could not be turned on ($($_.Exception.Message))." -ForegroundColor Yellow
-        Write-Host "      To update later, run this same command again."
+        # Some locked-down laptops refuse sign-in/unlock triggers; keep the daily one.
+        try {
+            Register-ScheduledTask -TaskName "SimForge Update" -Action $action -Trigger $daily -Settings $settings -Force | Out-Null
+            Ok "SimForge will update itself daily at noon (or as soon as the laptop is awake)"
+        } catch {
+            Write-Host "      Automatic updates could not be turned on ($($_.Exception.Message))." -ForegroundColor Yellow
+            Write-Host "      To update later, run this same command again."
+        }
     }
 
     Write-Host ""

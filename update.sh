@@ -2,7 +2,7 @@
 #
 # SimForge background updater for macOS.
 #
-# The ph.nrdev.simforge.update LaunchAgent runs this at login and every 6 hours
+# The ph.nrdev.simforge.update LaunchAgent runs this at login and every hour
 # (see README.md). It updates the app with `git pull`. This file lives in the
 # repository, so a pull updates the updater too.
 

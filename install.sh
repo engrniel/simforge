@@ -10,7 +10,8 @@
 #   1. Git + Python: Apple's Command Line Tools (asks the student to click Install once).
 #   2. SimForge: `git clone` into ~/SimForge (or `git pull` if it is there).
 #   3. ~/Applications/SimForge.app, a link to the app inside ~/SimForge.
-#   4. A LaunchAgent that runs update.sh (`git pull`) at login and every 6 hours.
+#   4. A LaunchAgent that runs update.sh (`git pull`) at login and every hour.
+#      launchd runs an hourly check missed during sleep as soon as the Mac wakes.
 #   5. Opens SimForge.
 
 set -u
@@ -89,13 +90,14 @@ cat > "$PLIST" <<EOF
   <key>ProgramArguments</key>
   <array><string>/bin/bash</string><string>$DIR/update.sh</string></array>
   <key>RunAtLoad</key><true/>
-  <key>StartInterval</key><integer>21600</integer>
+  <key>StartCalendarInterval</key>
+  <dict><key>Minute</key><integer>0</integer></dict>
 </dict>
 </plist>
 EOF
 launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
 if launchctl bootstrap "gui/$(id -u)" "$PLIST" >/dev/null 2>&1; then
-  ok "SimForge will update itself at login and every 6 hours"
+  ok "SimForge will update itself at login, every hour, and after waking from sleep"
 else
   printf '\033[33m      Automatic updates could not be turned on. To update later, run this same command again.\033[0m\n'
 fi
